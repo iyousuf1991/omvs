@@ -1,0 +1,12 @@
+//OMVSCMD  JOB (ACCT),'USS CMD',CLASS=A,MSGCLASS=X,MSGLEVEL=(1,1)
+//* Runs: ls -l /var/log
+//STEP1    EXEC PGM=BPXBATCH,REGION=0M,
+//         PARM='SH ls -l /var/log'
+//STDOUT   DD  DSN=YOUR.HLQ.OMVS.OUT,
+//             DISP=(,CATLG,DELETE),
+//             SPACE=(CYL,(1,1),RLSE),
+//             DCB=(RECFM=VB,LRECL=137,BLKSIZE=0)
+//STDERR   DD  DSN=YOUR.HLQ.OMVS.ERR,
+//             DISP=(,CATLG,DELETE),
+//             SPACE=(CYL,(1,1),RLSE),
+//             DCB=(RECFM=VB,LRECL=137,BLKSIZE=0)
