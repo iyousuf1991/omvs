@@ -1,0 +1,147 @@
+//T0B0JUZ1  JOB (P110221,B1B0,99,99),'MANOJS',NOTIFY=T0B0EBF,
+// CLASS=X,MSGCLASS=Q,TIME=1440
+//*********************************************************************
+//* JOB NAME = DSNTIJUA
+//*
+//* DESCRIPTIVE NAME = INSTALLATION JOB STREAM
+//*
+//*    Licensed Materials - Property of IBM
+//*    5650-DB2
+//*    (C) COPYRIGHT 1982, 2017 IBM Corp.  All Rights Reserved.
+//*
+//*    STATUS = Version 12
+//*
+//* FUNCTION = DSNHDECP UPDATES
+//*
+//* PSEUDOCODE =
+//*   DSNTIZP  STEP  ASSEMBLE DSNHDECP DATA-ONLY LOAD MODULE
+//*   DSNTIZQ  STEP  LINK EDIT DSNHDECP LOAD MODULE INTO SDSNEXIT
+//*   DSNTIMQ  STEP  SMP/E PROCESSING FOR DSNHDECP (OPTIONAL)
+//*
+//* NOTES = STEP DSNTIMQ MUST BE CUSTOMIZED FOR SMP.  SEE THE NOTES
+//*         PRECEDING STEP DSNTIMQ BEFORE RUNNING THIS JOB.
+//*
+//* Change activity =
+//*   08/07/2017 Split up DSNTIJUZ                     s64075 / PI85767
+//*               - DSNTIJUZ: For DSNZPARM
+//*               - DSNTIJUA: For DSNHDECP
+//*               - DSNTIJUM: For DSNHMCID
+//*               - DSNTIJUL: For BSDS / Change log inventory
+//*   06/21/2018 Remove references to ADSNLOAD           PI98672/s77957
+//*   02/03/2020 Avoid GIM40501E in DSNTIMQ              PH20105
+//*
+//*********************************************************************
+//*
+//*********************************************************************
+//* ASSEMBLE AND LINK EDIT DATA-ONLY LOAD MODULE DSNHDECP.
+//*********************************************************************
+//DSNTIZP EXEC PGM=ASMA90,PARM='OBJECT,NODECK',COND=(4,LT)
+//SYSLIB   DD  DISP=SHR,
+//         DSN=DB2TN.DB2V12.SDSNMACS
+//SYSLIN   DD  DSN=&&LOADSET(DSNHDECA),
+//             DISP=(NEW,PASS),
+//             UNIT=SYSDA,SPACE=(80,(50,50,2)),
+//             DCB=(BLKSIZE=80)
+//SYSPRINT DD  SYSOUT=*
+//SYSUDUMP DD  SYSOUT=*
+//SYSUT1   DD  UNIT=SYSDA,SPACE=(800,(50,50),,,ROUND)
+//SYSUT2   DD  UNIT=SYSDA,SPACE=(800,(50,50),,,ROUND)
+//SYSUT3   DD  UNIT=SYSDA,SPACE=(800,(50,50),,,ROUND)
+//SYSIN    DD  *
+   DSNHDECM    ASCCSID=1252,                                           X
+               AMCCSID=65534,                                          X
+               AGCCSID=65534,                                          X
+               SCCSID=37,                                              X
+               MCCSID=65534,                                           X
+               GCCSID=65534,                                           X
+               USCCSID=367,                                            X
+               UMCCSID=1208,                                           X
+               UGCCSID=1200,                                           X
+               ENSCHEME=EBCDIC,                                        X
+               APPENSCH=EBCDIC,                                        X
+               DATE=USA,                                               X
+               DATELEN=0,                                              X
+               DECARTH=DEC31,                                          X
+               DECIMAL=PERIOD,                                         X
+               DEF_DECFLOAT_ROUND_MODE=ROUND_HALF_EVEN,                X
+               DEFLANG=IBMCOB,                                         X
+               DELIM=DEFAULT,                                          X
+               IMPLICIT_TIMEZONE=CURRENT,                              X
+               MIXED=NO,                                               X
+               PADNTSTR=NO,                                            X
+               SQLDELI=DEFAULT,                                        X
+               DSQLDELI=APOST,                                         X
+               SSID=DB2,                                               X
+               STDSQL=NO,                                              X
+               TIME=USA,                                               X
+               TIMELEN=0,                                              X
+               DYNRULS=YES,                                            X
+               SQLLEVEL=V12R1M500,                                     X
+               LC_CTYPE=
+     END
+//*
+//*********************************************************************
+//* LINK EDIT DSNHDECP AND PUT MODULE IN SDSNEXIT
+//*   DSNHDECP IS A DATA-ONLY LOAD MODULE CONTAINING DEFAULT VALUES
+//*   AND IS REQUIRED IN SDSNEXIT BY DB2 AND APPLICATION PROGRAMS.
+//*********************************************************************
+//DSNTIZQ EXEC PGM=IEWL,PARM='LIST,XREF,LET,RENT',
+//             COND=(4,LT)
+//DSNLOAD  DD  DISP=SHR,
+//         DSN=DB2TN.DB2V12.SDSNEXIT
+//         DD  DISP=SHR,
+//         DSN=DB2TN.DB2V12.SDSNLOAD
+//SYSPUNCH DD  DSN=&&LOADSET(DSNHDECA),DISP=(OLD,DELETE)
+//SYSLMOD  DD  DISP=SHR,
+//         DSN=DB2TN.DB2V12.SDSNEXIT
+//SYSPRINT DD  SYSOUT=*
+//SYSUDUMP DD  SYSOUT=*
+//SYSUT1   DD  UNIT=SYSDA,SPACE=(1024,(50,50))
+//SYSLIN   DD  *
+   INCLUDE SYSPUNCH(DSNHDECA)
+   ORDER   DSNAA
+   INCLUDE DSNLOAD(DSNAA)
+   INCLUDE DSNLOAD(DSNARIB)
+   ENTRY   DSNHDECP
+   MODE    AMODE(24),RMODE(24)
+   NAME    DSNHDECP(R)
+//*
+//*********************************************************************
+//* OPTIONAL DO SMP/E PROCESSING TO TRACK DSNHDECP CHANGES.
+//*
+//*  This job step defines SMP/E JCLIN processing for DB2.  Advanced
+//*  SMP/E skills are recommended.  Before enabling this job step,
+//*  be aware that:
+//*   * Any changes you make to this job may affect current or future
+//*     SMP/E processing for DB2.
+//*   * Any changes made to the low level qualifier of any data sets
+//*     used here may result in new DDDEFs being required.
+//*   * You may need to define a DDDEF for the system MACLIB in the
+//*     target zone of the CSI used for DB2, and add it to the
+//*     DDDEF(SYSLIB) concatenation.
+//*
+//*  Contact the IBM Support Center for further information.
+//*
+//* NOTE: THIS STEP MUST BE CUSTOMIZED AS FOLLOWS FOR SMP:
+//* 1. UNCOMMENT THE STEP
+//* 2. LOCATE AND CHANGE THE FOLLOWING STRINGS TO THE VALUES YOU
+//*    SPECIFIED FOR THEM IN JOB DSNTIJAE:
+//*    A.'?SMPPRE?' TO THE PREFIX OF YOUR SMP LIBRARY NAME.
+//*    B.'?SMPMLQ?' TO THE MIDDLE LEVEL QUALIFIER OF YOUR SMP CSI
+//* 3. UPDATE SYSOUT CLASSES AS DESIRED (DEFAULT IS '*')
+//*********************************************************************
+//*  //DSNTIMQ EXEC PGM=GIMSMP,PARM='CSI=?SMPPRE?.?SMPMLQ?.CSI',
+//*  //             REGION=4096K,COND=(2,LT)
+//*  //SYSPRINT DD  SYSOUT=*
+//*  //SYSUDUMP DD  SYSOUT=*
+//*  //SMPCNTL DD *
+//*      SET BDY(DSNTARG).
+//*      JCLIN.
+//*      SET BDY(DSNTARG).
+//*      UCLIN.
+//*       REP MOD ( DSNAA ) DISTLIB ( ADSNLOAD ).
+//*       REP MOD ( DSNARIB ) DISTLIB ( ADSNLOAD ).
+//*      ENDUCL.
+//*  //SMPJCLIN DD DISP=SHR,
+//*  //      DSN=DB2TN.DB2V12.FL500.TSYS.SDSNSAMP(DSNTIJUA)
+//*

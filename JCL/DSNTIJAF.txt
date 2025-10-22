@@ -1,0 +1,35 @@
+//T0B0JAFI  JOB (P110221,B1B0,99,99),'MANOJS',NOTIFY=T0B0EBF,           00000001
+// CLASS=X,MSGCLASS=Q,TIME=1440                                         00000002
+//********************************************************************* 00010000
+//*                                                                     00020000
+//* JOB NAME = DSNTIJAF                                                 00030000
+//*                                                                     00040000
+//* DESCRIPTIVE NAME = INSTALLATION JOB STREAM                          00050000
+//*                                                                     00060000
+//*    Licensed Materials - Property of IBM                             00070000
+//*    5650-DB2                                                         00080000
+//*    (C) COPYRIGHT 2016 IBM Corp.  All Rights Reserved.               00090000
+//*                                                                     00100000
+//*    STATUS = Version 12                                              00110000
+//*                                                                     00120000
+//* FUNCTION = ACTIVATE A DB2 FUNCTION LEVEL                            00130000
+//*                                                                     00140000
+//* PSEUDOCODE =                                                        00150000
+//*   DSNTAFL  STEP      ACTIVATE A FUNCTION LEVEL                      00160000
+//*                                                                     00170000
+//* CHANGE ACTIVITY =                                                   00180000
+//*   08/20/2016 Add ACTIVATE mode for function levels   s29276 PI70406 00190000
+//*                                                                     00200000
+//********************************************************************* 00210000
+//JOBLIB  DD  DISP=SHR,                                                 00220000
+//            DSN=DB2TN.DB2V12.SDSNLOAD                                 00230000
+//*                                                                     00240000
+//DSNTAFL EXEC PGM=IKJEFT01,DYNAMNBR=20                                 00250000
+//SYSTSPRT DD  SYSOUT=*                                                 00260000
+//SYSPRINT DD  SYSOUT=*                                                 00270000
+//SYSUDUMP DD  SYSOUT=*                                                 00280000
+//SYSTSIN  DD  *                                                        00290000
+  DSN SYSTEM(DB2)                                                       00300000
+  -ACTIVATE FUNCTION LEVEL(V12R1M500)                                   00310000
+  END                                                                   00320000
+/*                                                                      00330000

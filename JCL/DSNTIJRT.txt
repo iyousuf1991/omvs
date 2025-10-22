@@ -1,0 +1,1247 @@
+//T0B0EBHT  JOB (P110221,B1B0,99,99),'MANOJS',NOTIFY=T0B0EBH,
+// CLASS=X,MSGCLASS=Q,TIME=1440
+//*********************************************************************
+//* JOB NAME = DSNTIJRT
+//*
+//* DESCRIPTIVE NAME = INSTALLATION JOB STREAM
+//*
+//*    Licensed Materials - Property of IBM
+//*    5650-DB2
+//*    (C) COPYRIGHT 1982, 2016 IBM Corp.  All Rights Reserved.
+//*
+//*    STATUS = Version 12
+//*
+//* FUNCTION = Install and configure DB2-supplied routines
+//*
+//* PSEUDOCODE =
+//*   DSNTRIN  STEP      Install and configure DB2-supplied routines
+//*
+//* NOTES =
+//*
+//*   Before running this job, verify that the configuration control
+//*   statements contain the desired settings for each routine.
+//*
+//*   RECOMMENDATION: Run this job with a user ID that has       s24922
+//*   primary or secondary authorization as DB2 Installation     s24922
+//*   System Administrator or DB2 Installation System Operator.  s24922
+//*   See the explanation of the AUTHID and DEFPKOWN parameters  s24922
+//*   for additional requirements when running with              s24922
+//*   Installation System Operator authority.                    s24922
+//*
+//*   See further below for an explanation of the parameters and DD
+//*   statements used by the DSNTRIN program.
+//*
+//*   =================================================================
+//*   ³          THE FOLLOWING NOTICES ARE FOR ALL CUSTOMERS          ³
+//*   =================================================================
+//*
+//*   -----------------------------------------------------------------
+//*   If you want to use the DB2 ODBC and JDBC MetaData methods to
+//*   get information about a remote ALIAS, you need to bind a pack-
+//*   age called DSNACLRU on the locaL DB2 for z/OS system where the
+//*   alias resides and also on the remote DB2 for z/OS server where
+//*   the base table or view for the alias resides.  Running this job
+//*   binds the local package for DSNACLRU.  Use a command like the
+//*   following to bind DSNACLRU on the remote system:
+//*
+//*     BIND PACKAGE(<RTLOCB>.DSNASPCC) MEMBER(DSNACLRU) -
+//*          ACTION(REPLACE) ISOLATION(UR) -
+//*          RELEASE(COMMIT) ENCODING(UNICODE) -
+//*          LIBRARY('<PREFIX>.SDSNDBRM')
+//*
+//*   where <RTLOCB> is the location name of the DB2 for z/OS server
+//*   where the base table of view for the remote alias resides, and
+//*   <PREFIX> is the data set name prefix of the SDSNDBRM library.
+//*   -----------------------------------------------------------------
+//*
+//*   The authorization ID that owns the package for stored procedure
+//*   SYSPROC.DSNAHVPM needs to have authority to access the catalog
+//*   tables SYSIBM.SYSPACKSTMT and SYSIBM.SYSSTMT: Ensure that the
+//*   PKGOWNER option of the configuration control statement for
+//*   SYSPROC.DSNAHVPM specifies an authorization ID with the required
+//*   authority.
+//*   -----------------------------------------------------------------
+//*
+//*   For native SQL procedures and compiled SQL scalar functions,
+//*   DSNTRIN recognizes only the routine's V1 version as the official
+//*   DB2-supplied routine. Versions other than V1 are each reported
+//*   by error message DSNT058I and cause DSNTRIN to terminate
+//*   with return code 12 before other processing occurs.
+//*   -----------------------------------------------------------------
+//*
+//*   The DB2XML.SOAPHTTPV and DB2XML.SOAPHTTPC Web Services Consumer
+//*   UDFs require different external modules depending on the version
+//*   of the XML Toolkit for z/OS you use:
+//*
+//*                ³               ³ External name required
+//*                ³               ³ by XML Toolkit for z/OS
+//*        UDF     ³   Specific    ³-------------------------
+//*        name    ³   name        ³ V1.8, V1.9 ³   V1.10
+//*      ----------+---------------+-------------------------
+//*      SOAPHTTPC ³ SOAPHTTPCICO  ³  DSNASHCC  ³  DSNASJCC
+//*      SOAPHTTPC ³ SOAPHTTPVICO  ³  DSNASHVC  ³  DSNASJVC
+//*      SOAPHTTPV ³ SOAPHTTPCIVO  ³  DSNASHCV  ³  DSNASJCV
+//*      SOAPHTTPV ³ SOAPHTTPVIVO  ³  DSNASHVV  ³  DSNASJVV
+//*
+//*   DSNTRIN does not check or modify the external names of existing
+//*   instances of these functions.  However, when creating them, it
+//*   assigns the DSNASJxx modules required by XML Toolkit V1.10.
+//*   Therefore, if you use a previous version of the XML Toolkit
+//*   then, after you run DSNTRIN to create these functions, you need
+//*   alter them to use the DSNASHxx external names.
+//*
+//*   -----------------------------------------------------------------
+//*
+//*   The DSNTRIN batch program accepts the following parameters:
+//*     - DB2SSN  : Specifies the name of the DB2 subsystem
+//*
+//*     - MODE    : Specifies the processing mode:
+//*                 - INSTALL
+//*                     Creates, binds, and grants access to the
+//*                     DB2-supplied routines and related objects.
+//*                     Existing objects are not replaced except as
+//*                     discussed above under special notices.
+//*                 - INSTALL-PREVIEW
+//*                     Same as INSTALL mode except that no changes
+//*                     are processed.  Generated JCL is outputted to
+//*                     the JCLOUT DD.
+//*                 - REINSTALL
+//*                     Similar to INSTALL mode, except that existing
+//*                     DB2-supplied routines and CGTTs are first
+//*                     dropped.  Existing related databases, table
+//*                     spaces, tables, and indexes are not dropped
+//*                     except as discussed under special notices.
+//*                 - REINSTALL-PREVIEW
+//*                     Same as REINSTALL mode except that no changes
+//*                     are processed.  Generated JCL is outputted to
+//*                     the JCLOUT DD.
+//*                 - REINITIALIZE
+//*                     Similar to REINSTALL mode, except that
+//*                     existing related databases, table spaces,
+//*                     tables, and indexes are first dropped.
+//*                 - REINITIALIZE-PREVIEW
+//*                     Same as REINITIALIZE mode except that no changes
+//*                     are processed.  Generated JCL is outputted to
+//*                     the JCLOUT DD.
+//*
+//*     - AUTHID  : Specifies the CURRENT SQLID setting to be used to
+//*                 create and configure most DB2-supplied routines
+//*                 and related objects.  Also, the default OWNER for
+//*                 binding packages for these routines when     s24922
+//*                 the DEFPKOWN parameter is not specified.     s24922
+//*                 -> Specify SYSINSTL here when using DB2      s24922
+//*                    Installation System Operator authority    s24922
+//*                    to execute this job.                      s24922
+//*
+//*     - SECDEFID: Specifies the CURRENT SQLID setting to be used to
+//*                 create and configure DB2-supplied routines that
+//*                 use SECURITY DEFINER.  This ID must be a logonable
+//*                 ID because it will be used by WLM to execute such
+//*                 routines.
+//*                 -> Specify SYSINSTL here when using DB2      s24922
+//*                    Installation System Operator authority    s24922
+//*                    to execute this job.                      s24922
+//*
+//*     - DEFPKOWN: Specifies the default OWNER for binding the  s24922
+//*                 package for a DB2-supplied routine when one
+//*                 is not specified explicity via the PKOWNER
+//*                 parameter of the routine's configuration
+//*                 control statement.
+//*                 -> This parameter is required only when the  s24922
+//*                    AUTHID parameter is set to SYSINSTL.      s24922
+//*                 -> Specify an installation system            s24922
+//*                    administrator ID when using DB2 System    s24922
+//*                    Operator authority to execute this job    s24922
+//*                    for DB2 installation.                     s24922
+//*                 -> Specify an authorization ID that has      s24922
+//*                    been granted system DBADM and DATAACCESS  s24922
+//*                    authorities when using DB2 System         s24922
+//*                    Operator authority to execute this job    s24922
+//*                    for DB2 migration.                        s24922
+//*
+//*   The DSNTRIN batch program allocates the following DD statements:
+//*   * Input DDs used by DSNTRIN:
+//*     - DBRMLIB : For DB2-supplied DBRMs (SDSNDBRM target library)
+//*
+//*     - DB2OPT  : For optional configuration preferences:
+//*                 - STOGROUP
+//*                     The name of the STOGROUP for databases and
+//*                     table spaces created by DSNTRIN.  SYSDEFLT is
+//*                     used if this parameter is not specified.
+//*                 - INDEXSTOG
+//*                     The name of the STOGROUP for indexes     DM1679
+//*                     created by DSNTRIN.  SYSDEFLT is
+//*                     used if this parameter is not specified.
+//*                 - BP4K
+//*                     The name of the 4-KB page size buffer pool for
+//*                     table spaces created by DSNTRIN.  BP0 is used
+//*                     if this parameter is not specified.
+//*                 - BP8K
+//*                     The name of the 8-KB page size buffer pool for
+//*                     table spaces created by DSNTRIN.  BP8K0 is used
+//*                     if this parameter is not specified.
+//*                 - BP16K
+//*                     The name of the 16-KB page size buffer pool for
+//*                     table spaces created by DSNTRIN. BP16K0 is used
+//*                     if this parameter is not specified.
+//*                 - BP32K
+//*                     The name of the 32-KB page size buffer pool for
+//*                     table spaces created by DSNTRIN. BP32K is used
+//*                     if this parameter is not specified.
+//*                 - LOBBP8K
+//*                     The name of the 8-KB page size buffer pool for
+//*                     LOB table spaces created by DSNTRIN.  BP8K0 is
+//*                     used if this parameter is not specified.
+//*                 - LOBBP16K
+//*                     The name of the 16-KB page size buffer pool for
+//*                     LOB table spaces created by DSNTRIN.  BP16K0 is
+//*                     used if this parameter is not specified.
+//*                 - LOBBP32K
+//*                     The name of the 32-KB page size buffer pool for
+//*                     LOB table spaces created by DSNTRIN.  BP32K is
+//*                     used if this parameter is not specified.
+//*                 - IMS_SECURITY
+//*                     The SECURITY type (DB2, DEFINER, or USER) for
+//*                     the DB2-supplied IMS routines.  SECURITY DB2
+//*                     is assumed when this keyword is not specified.
+//*                     -> Existing DB2-supplied IMS routines will be
+//*                        altered if needed to conform with the
+//*                        SECURITY type specified here.
+//*                 - MQ_SECURITY
+//*                     The SECURITY type (DB2, DEFINER, or USER) for
+//*                     the DB2-supplied MQ routines.  SECURITY DB2
+//*                     is assumed when this keyword is not specified.
+//*                     -> Existing DB2-supplied MQ routines will be
+//*                        altered if needed to conform with the
+//*                        SECURITY type specified here.
+//*                 - SOAP_SECURITY
+//*                     The SECURITY type (DB2, DEFINER, or USER) for
+//*                     the DB2-supplied SOAP routines.  SECURITY DB2
+//*                     is assumed when this keyword is not specified.
+//*                     -> Existing DB2-supplied SOAP routines will be
+//*                        altered if needed to conform with the
+//*                        SECURITY type specified here.
+//*                 NOTE: DSNTRIN does not create or activate the
+//*                   storage group or buffer pools specified here.
+//*
+//*     - CFIGIN  : For configuration control statements for the
+//*                 DB2-supplied routines, using these parameters:
+//*                 - WLMENV
+//*                     Required: The name of the WLM environment for
+//*                     running the routine.  Note: This parameter is
+//*                     not required for the following routines:
+//*                     - SYSIBMADM.CREATE_WRAPPED
+//*                     - SYSPROC.SET_MAINT_MODE_RECORD_NO_TEMPORAL-
+//*                       HISTORY
+//*                     - SYSTOOLS.REGSP
+//*                     - SYSTOOLS.REG_MATCHES
+//*                     - SYSTOOLS.REG_MATCHES_NOFLAGS
+//*                 - GRANTTO
+//*                     Required: A list of authorization IDs to be
+//*                     granted access to the routine
+//*                 - PKGOWNER
+//*                     Optional: The authorization ID to be specified
+//*                     as OWNER when binding a package for the
+//*                     routine.  If not given, the package owner is
+//*                     given by the DSNTRIN DEFPKOWN parameter  s24922
+//*                     (if specified) or by the DSNTRIN AUTHID  s24922
+//*                     parameter (otherwise).                   s24922
+//*
+//* * Work DDs used by DSNTRIN:
+//*     - SYSUT1  : For internal bind processing
+//*
+//* * Output DDs used by DSNTRIN:
+//*     - SYSPRINT: For DSNTRIN messages and reports
+//*
+//*     - SYSTSPRT: For internal bind processing
+//*
+//*     - CFIGOUT : For configuration control statements
+//*
+//*     - SQLOUT  : For SQL statements generated by DSNTRIN
+//*
+//*     - BINDOUT : For BIND commands generated by DSNTRIN
+//*
+//*     - JCLOUT  : For JCL generated by DSNTRIN in MODE(xxxx-PREVIEW)
+//*                 By default this DD allocates member DSNTRINO of
+//*                 DSN=DB2TN.DB2V12.SRCLIB.DATA
+//*
+//*   -----------------------------------------------------------------
+//*   To ensure consistency between the user-managed XSR database
+//*   (DSNXSR) and the XSR database in the DB2 catalog, DSNTRIN creates
+//*   the following tables with RESTRICT ON DROP or alters them to ADD
+//*   RESTRICT ON DROP (if it is not already in effect):
+//*     - SYSIBM.XSRANNOTATIONINFO
+//*     - SYSIBM.XSROBJECTCOMPONENTS
+//*     - SYSIBM.XSROBJECTHIERARCHIES
+//*     - SYSIBM.XSROBJECTS
+//*   In MODE(REINITIALIZE), the DROP DATABASE DSNXSR request will fail
+//*   with SQLCODE -672 and DSNTRIN will end with return code 12 when
+//*   RESTRICT ON DROP is in effect for these tables.  To drop these
+//*   tables intentionally, first alter them to remove the RESTRICT ON
+//*   DROP.  You must also remove all registered XML objects from DB2
+//*   or the request will fail with SQLCODE -616 and DSNTRIN will end
+//*   with return code 12.
+//*
+//*   To ensure recoverability, you should create regular backup copies
+//*   of these tables.
+//*   -----------------------------------------------------------------
+//*
+//*
+//* CHANGE LOG =
+//*   09/19/2011 Remove obsolete AMI-based MQ functions  DM1548/PM48451
+//*              ffdm1548
+//*   12/07/2011 Add note regarding dropping of AMI-     DM1548/PM48451
+//*              based and XML MQ routines                      PM47246
+//*   12/26/2011 Add SYSPROC.SYSTS_ALTER                 DK1594/PM55239
+//*   08/08/2011 Add SYSIBM.SQLPSEUDOCOLUMNS           DK1559 / PM41083
+//*                                                             pm63574
+//*   08/22/2012 Add INDEXSTOG option                    DM1679/PM70897
+//*   10/06/2012 Remove SYSPROC.DSNAEXP                 DM1290 / 161046
+//*   09/20/2012 Add ADMIN_UPDATE_SYSPARM                DK1557/PM71114
+//*   10/15/2012 Add proc SYSPROC.SET_PLAN_HINT          DM1662/PM66047
+//*              and LOBBP32K option
+//*   11/29/2012 Add SYSPROC.ADMIN_COMMAND_MVS                   DN1682
+//*   04/19/2012 Add proc                              DM1541 / PM61811
+//*                  SYSPROC.SET_MAINT_MODE_RECORD_NO_TEMPORALHISTORY
+//*   08/26/2013 Add SYSFUN.XSLTRANSFORM               DM1737 / PM90866
+//*   06/21/2013 Add JSON UDFs                         DM1727 / PM98357
+//*   01/03/2014 Add SYSPROC.ADMIN_EXPLAIN_MAINT       DN1801 / PI05200
+//*   03/18/2014 JSON fixes and additions                 171264 DM1727
+//*   06/21/2013 Add JSON UDFs                         DM1727 / PI10521
+//*   07/26/2014 Add notice for DSNUTILU recreate   s20128_inst1 s20128
+//*   01/24/2014 Remove extraneous JSON support                  176043
+//*   05/11/2015 Document dependency of SOAPHTTPV      PI30443 / DM1848
+//*              and SOAPHTTPC functions on XML                  DM1848
+//*              Toolkit V1.10                                   DM1848
+//*   07/15/2015 Add SYSPROC.DSNUTILV               s25173_inst2 s25173
+//*   10/02/2015 Installation w/o SYSADM            s24922_inst1 s24922
+//*   10/27/2015 Add proc SYSIBMADM.CREATE_WRAPPED  s25900_inst1 s25900
+//*   01/15/2016 Add DB2OPT options IMS_SECURITY,        PI56913 DN1955
+//*              MQ_SECURITY, and SOAP_SECURITY                  DN1955
+//*   02/15/2016 Long data set names                            PI42601
+//*   08/21/2018 Tolerate creation of deprecated TSs    s81673 / t81374
+//*              - remove support for SYSPROC.DSNACCOR
+//*   10/22/2019 Add SYSPROC.ADMIN_INFO_IFCID                   PH18225
+//*   05/21/2019 Add BLOCKING_THREADS                            e39301
+//*
+//*********************************************************************
+//*
+//JOBLIB   DD DISP=SHR,DSN=DB2TN.DB2V12.SDSNEXIT
+//         DD DISP=SHR,DSN=DB2TN.DB2V12.SDSNLOAD
+//         DD DISP=SHR,DSN=CEE.SCEERUN
+//*
+//*   DSNTRIN : Install and configure DB2-supplied routines
+//*
+//DSNTRIN EXEC PGM=DSNTRIN,COND=(4,LT),
+//             PARM=('DB2SSN(DB2) MODE(INSTALL)',
+//             ' AUTHID(T0B0IZ0) SECDEFID(DB2ADM)',
+//             ' DEFPKOWN(T0B0IZ0)')
+//DBRMLIB  DD DISP=SHR,DSN=DB2TN.DB2V12.SDSNDBRM
+//SYSUT1   DD UNIT=SYSDA,SPACE=(27930,(10,5)),
+//            DCB=(RECFM=FB,LRECL=133)
+//SYSPRINT DD SYSOUT=*,DCB=(RECFM=FB,LRECL=133)
+//SYSTSPRT DD SYSOUT=*
+//CFIGOUT  DD SYSOUT=*
+//SQLOUT   DD SYSOUT=*
+//BINDOUT  DD SYSOUT=*
+//JCLOUT   DD DISP=SHR,
+//         DSN=DB2TN.DB2V12.SRCLIB.DATA(DSNTRINO)
+//DB2OPT   DD  *
+  STOGROUP(SYSDEFLT)
+  INDEXSTOG(SYSDEFLT)
+  BP4K(BP0)
+  BP8K(BP8K0)
+  BP16K(BP16K0)
+  BP32K(BP32K)
+  LOBBP8K(BP8K0)
+  LOBBP16K(BP16K0)
+  LOBBP32K(BP32K)
+  IMS_SECURITY(DB2)
+  MQ_SECURITY(DB2)
+  SOAP_SECURITY(DB2)
+//CFIGIN   DD *
+*
+* The statements below are used by PGM=DSNTRIN to customize
+* DB2-supplied stored procedures and UDFs on this DB2.
+*
+* Rules:
+* (1) All statements are required - do not remove any.
+* (2) Statements must be separated by an all-blank line
+* (3) Lines that contain '*' in column 1 are comment lines
+* (4) Each statement specifies the WLM ENVIRONMENT (WLMENV) and
+*     execute access list (GRANTTO) for the indicated routine.
+*     WLMENV and GRANTTO are required parameters but you can modify
+*     the settings.
+* (5) Some statements also specify the package owner (PKGOWNER)
+*     for the routine.  PKGOWNER is optional.  It is ignored if
+*     specified for a routine that does not have a package.
+* (6) Do not use embedded blanks in values specified for WLMENV,
+*     GRANTTO, or PKGOWNER
+*
+*
+***********************************************************************
+** Trace formatting routines
+***********************************************************************
+  SYSPROC.DSNWSPM
+    WLMENV(DSNWLM_NUMTCB1)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DSNWZP
+    WLMENV(DSNWLM_NUMTCB1)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** Utility invocation routines
+***********************************************************************
+  SYSPROC.DSNUTILS
+    WLMENV(DSNWLM_UTILS)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DSNUTILU
+    WLMENV(DSNWLM_UTILS)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DSNUTILV
+    WLMENV(DSNWLM_UTILS)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** SYSIBM.USERNAMES encryption routine
+***********************************************************************
+  SYSPROC.DSNLEUSR
+    WLMENV(DSNWLM_NUMTCB1)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** SQL procedure processing routines
+***********************************************************************
+  SYSIBMADM.CREATE_WRAPPED
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DSNTBIND
+    WLMENV(DSNWLM_REXX)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DSNTPSMP
+    WLMENV(DSNWLM_REXX)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.WLM_REFRESH
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** Java procedure processing routines
+***********************************************************************
+  SQLJ.ALTER_JAVA_PATH
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SQLJ.DB2_INSTALL_JAR
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SQLJ.DB2_REMOVE_JAR
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SQLJ.DB2_REPLACE_JAR
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SQLJ.DB2_UPDATEJARINFO
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SQLJ.INSTALL_JAR
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SQLJ.REMOVE_JAR
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SQLJ.REPLACE_JAR
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** Unified debugger for SQL and Java routines
+***********************************************************************
+  DB2DEBUG.CREATE_SESSION
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  DB2DEBUG.DEBUGGERLEVEL
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  DB2DEBUG.DESTROY_SESSION
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  DB2DEBUG.GET_REPORT
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  DB2DEBUG.LIST_SESSION
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  DB2DEBUG.PUT_COMMAND
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  DB2DEBUG.QUERY_SESSION
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_ENDSESSIONMANAGER
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_INITIALIZECLIENT
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_LOOKUPSESSIONMANAGER
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_PINGSESSIONMANAGER
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_RECVCLIENTREPORTS
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_RUNSESSIONMANAGER
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_SENDCLIENTCOMMANDS
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_SENDCLIENTREQUESTS
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DBG_TERMINATECLIENT
+    WLMENV(DSNWLM_DEBUGGER)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** XML schema processing routines
+***********************************************************************
+  SYSFUN.XSLTRANSFORM
+    WLMENV(DSNWLM_JAVA)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.XSR_ADDSCHEMADOC
+    WLMENV(DSNWLM_XML)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.XSR_COMPLETE
+    WLMENV(DSNWLM_JAVA)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.XSR_REGISTER
+    WLMENV(DSNWLM_XML)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.XSR_REMOVE
+    WLMENV(DSNWLM_XML)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** IBM Text Search routines
+***********************************************************************
+  SYSPROC.SYSTS_ALTER
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.SYSTS_CREATE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.SYSTS_DROP
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSFUN.SYSTS_ENCRYPT
+    WLMENV(DSNWLM_JAVA)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.SYSTS_RESTORE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.SYSTS_START
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.SYSTS_STOP
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.SYSTS_TAKEOVER
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.SYSTS_UPDATE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** Database MetaData routines
+***********************************************************************
+  SYSIBM.SQLCAMESSAGE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLCOLPRIVILEGES
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLCOLUMNS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLFOREIGNKEYS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLFUNCTIONCOLS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLFUNCTIONS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLGETTYPEINFO
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLPRIMARYKEYS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLPROCEDURECOLS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLPROCEDURES
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLPSEUDOCOLUMNS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLSPECIALCOLUMNS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLSTATISTICS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLTABLEPRIVILEGES
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLTABLES
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBM.SQLUDTS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** Administrative Scheduler and Administrative Enablement routines
+***********************************************************************
+  SYSPROC.ADMIN_COMMAND_DB2
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_COMMAND_DSN
+    WLMENV(DSNWLM_REXX)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_COMMAND_MVS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_COMMAND_UNIX
+    WLMENV(DSNWLM_PGM_CONTROL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_DS_BROWSE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_DS_DELETE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_DS_LIST
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_DS_RENAME
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_DS_SEARCH
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_DS_WRITE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_EXPLAIN_MAINT
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_INFO_HOST
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_INFO_IFCID
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_INFO_SMS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_INFO_SQL
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_INFO_SSID
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_INFO_SYSLOG
+    WLMENV(DSNWLM_REXX)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_INFO_SYSPARM
+    WLMENV(DSNWLM_NUMTCB1)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_JOB_CANCEL
+    WLMENV(DSNWLM_PGM_CONTROL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_JOB_FETCH
+    WLMENV(DSNWLM_PGM_CONTROL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_JOB_QUERY
+    WLMENV(DSNWLM_PGM_CONTROL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_JOB_SUBMIT
+    WLMENV(DSNWLM_PGM_CONTROL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_TASK_ADD
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_TASK_CANCEL
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  DSNADM.ADMIN_TASK_LIST
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  DSNADM.ADMIN_TASK_OUTPUT
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_TASK_REMOVE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  DSNADM.ADMIN_TASK_STATUS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  DSNADM.ADMIN_TASK_STATUSH
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_TASK_UPDATE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_UPDATE_SYSPARM
+    WLMENV(DSNWLM_REXX)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_UTL_EXECUTE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_UTL_MODIFY
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_UTL_MONITOR
+    WLMENV(DSNWLM_PGM_CONTROL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_UTL_SCHEDULE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.ADMIN_UTL_SORT
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSIBMADM.BLOCKING_THREADS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+ SYSPROC.DSN_WLM_APPLENV
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+ SYSPROC.DSNACCOX
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.GET_CONFIG
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.GET_MESSAGE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.GET_SYSTEM_INFO
+    WLMENV(DSNWLM_NUMTCB1)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.SET_MAINT_MODE_RECORD_NO_TEMPORALHISTORY
+    GRANTTO(T0B0G70)
+
+  SYSPROC.SET_PLAN_HINT
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.WLM_SET_CLIENT_INFO
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** DB2 optimization routine
+***********************************************************************
+  SYSPROC.DSNAHVPM
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(T0B0G70)
+    PKGOWNER(T0B0G70)
+
+***********************************************************************
+** CICS and IMS transaction invocation routines
+***********************************************************************
+  SYSPROC.DSNACICS
+    WLMENV(DSNWLM_DSNACICS)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DSNAIMS
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSPROC.DSNAIMS2
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** MQSeries routines
+***********************************************************************
+* Specific name 1 for UDF DB2MQ.MQREAD:
+  DB2MQ.DSN2RD
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQREAD:
+  DB2MQ.DSN2RD0
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQREAD:
+  DB2MQ.DSN2RD1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQREAD:
+  DB2MQ.DSN2RD2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2MQ.MQREADALL:
+  DB2MQ.DSN2Z
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQREADALL:
+  DB2MQ.DSN2Z0
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQREADALL:
+  DB2MQ.DSN2Z0R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQREADALL:
+  DB2MQ.DSN2Z1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 5 for UDF DB2MQ.MQREADALL:
+  DB2MQ.DSN2Z1R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 6 for UDF DB2MQ.MQREADALL:
+  DB2MQ.DSN2Z2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 7 for UDF DB2MQ.MQREADALL:
+  DB2MQ.DSN2Z2R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 8 for UDF DB2MQ.MQREADALL:
+  DB2MQ.DSN2Z3
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2MQ.MQREADALLCLOB:
+  DB2MQ.DSN2ZC
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQREADALLCLOB:
+  DB2MQ.DSN2ZC0
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQREADALLCLOB:
+  DB2MQ.DSN2ZC0R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQREADALLCLOB:
+  DB2MQ.DSN2ZC1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 5 for UDF DB2MQ.MQREADALLCLOB:
+  DB2MQ.DSN2ZC1R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 6 for UDF DB2MQ.MQREADALLCLOB:
+  DB2MQ.DSN2ZC2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 7 for UDF DB2MQ.MQREADALLCLOB:
+  DB2MQ.DSN2ZC2R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 8 for UDF DB2MQ.MQREADALLCLOB:
+  DB2MQ.DSN2ZC3
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2MQ.MQREADCLOB:
+  DB2MQ.DSN2RDC
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQREADCLOB:
+  DB2MQ.DSN2RDC0
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQREADCLOB:
+  DB2MQ.DSN2RDC1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQREADCLOB:
+  DB2MQ.DSN2RDC2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2MQ.MQRECEIVE:
+  DB2MQ.DSN2RV
+      WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQRECEIVE:
+  DB2MQ.DSN2RV0
+      WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQRECEIVE:
+  DB2MQ.DSN2RV1
+      WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQRECEIVE:
+  DB2MQ.DSN2RV2
+      WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2MQ.MQRECEIVEALL:
+  DB2MQ.DSN2X
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQRECEIVEALL:
+  DB2MQ.DSN2X0
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQRECEIVEALL:
+  DB2MQ.DSN2X0R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQRECEIVEALL:
+  DB2MQ.DSN2X1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 5 for UDF DB2MQ.MQRECEIVEALL:
+  DB2MQ.DSN2X1R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 6 for UDF DB2MQ.MQRECEIVEALL:
+  DB2MQ.DSN2X2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 7 for UDF DB2MQ.MQRECEIVEALL:
+  DB2MQ.DSN2X2R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 8 for UDF DB2MQ.MQRECEIVEALL:
+  DB2MQ.DSN2X3
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2MQ.MQRECEIVEALLCLOB:
+  DB2MQ.DSN2XC
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQRECEIVEALLCLOB:
+  DB2MQ.DSN2XC0
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQRECEIVEALLCLOB:
+  DB2MQ.DSN2XC0R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQRECEIVEALLCLOB:
+  DB2MQ.DSN2XC1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 5 for UDF DB2MQ.MQRECEIVEALLCLOB:
+  DB2MQ.DSN2XC1R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 6 for UDF DB2MQ.MQRECEIVEALLCLOB:
+  DB2MQ.DSN2XC2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 7 for UDF DB2MQ.MQRECEIVEALLCLOB:
+  DB2MQ.DSN2XC2R
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 8 for UDF DB2MQ.MQRECEIVEALLCLOB:
+  DB2MQ.DSN2XC3
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2MQ.MQRECEIVECLOB:
+  DB2MQ.DSN2RVC
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQRECEIVECLOB:
+  DB2MQ.DSN2RVC0
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQRECEIVECLOB:
+  DB2MQ.DSN2RVC1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQRECEIVECLOB:
+  DB2MQ.DSN2RVC2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2MQ.MQSEND:
+  DB2MQ.DSN2SD
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2MQ.MQSEND:
+  DB2MQ.DSN2SD1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 3 for UDF DB2MQ.MQSEND:
+  DB2MQ.DSN2SD2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 4 for UDF DB2MQ.MQSEND:
+  DB2MQ.DSN2SD3
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 5 for UDF DB2MQ.MQSEND:
+  DB2MQ.DSN2SDC
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 6 for UDF DB2MQ.MQSEND:
+  DB2MQ.DSN2SDC1
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 7 for UDF DB2MQ.MQSEND:
+  DB2MQ.DSN2SDC2
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+* Specific name 8 for UDF DB2MQ.MQSEND:
+  DB2MQ.DSN2SDC3
+    WLMENV(DSNWLM_MQSERIES)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** Web services/SOAP routines
+***********************************************************************
+* Specific name 1 for UDF DB2XML.SOAPHTTPC:
+  DB2XML.SOAPHTTPCICO
+    WLMENV(DSNWLM_WEBSERVICES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2XML.SOAPHTTPC:
+  DB2XML.SOAPHTTPVICO
+    WLMENV(DSNWLM_WEBSERVICES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2XML.SOAPHTTPNC:
+  DB2XML.SOAPHTTPNCICO
+    WLMENV(DSNWLM_WEBSERVICES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2XML.SOAPHTTPNC:
+  DB2XML.SOAPHTTPNVICO
+    WLMENV(DSNWLM_WEBSERVICES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2XML.SOAPHTTPNV:
+  DB2XML.SOAPHTTPNCIVO
+    WLMENV(DSNWLM_WEBSERVICES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2XML.SOAPHTTPNV:
+  DB2XML.SOAPHTTPNVIVO
+    WLMENV(DSNWLM_WEBSERVICES)
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF DB2XML.SOAPHTTPV:
+  DB2XML.SOAPHTTPCIVO
+    WLMENV(DSNWLM_WEBSERVICES)
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF DB2XML.SOAPHTTPV:
+  DB2XML.SOAPHTTPVIVO
+    WLMENV(DSNWLM_WEBSERVICES)
+    GRANTTO(PUBLIC)
+
+***********************************************************************
+** JSON routines
+***********************************************************************
+  SYSTOOLS.BSON2JSON
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON_BINARY
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON_BINARY2
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON_GET_POS_ARR_INDEX
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON_LEN
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON_TABLE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON_TABLE_BINARY
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON_TYPE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON_UPDATE
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.JSON2BSON
+    WLMENV(DSNWLM_GENERAL)
+    GRANTTO(PUBLIC)
+
+  SYSTOOLS.REGSP
+    GRANTTO(PUBLIC)
+
+* Specific name 1 for UDF SYSTOOLS.REG_MATCHES:
+  SYSTOOLS.REG_MATCHES
+    GRANTTO(PUBLIC)
+
+* Specific name 2 for UDF SYSTOOLS.REG_MATCHES:
+  SYSTOOLS.REG_MATCHES_NOFLAGS
+    GRANTTO(PUBLIC)
