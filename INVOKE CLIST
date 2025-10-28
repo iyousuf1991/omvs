@@ -1,0 +1,45 @@
+PROC 0 DEBUG                                                
+/*                                                          
+/*   DB2 V9 INTALLATION INVOCATION CLIST                    
+/*                                                          
+CONTROL NOMSG NOLIST NOCONLIST NOSYMLIST NOPROMPT NOFLUSH   
+IF &DEBUG = DEBUG THEN +                                    
+   CONTROL MSG LIST CONLIST SYMLIST PROMPT NOFLUSH          
+/*                                                          
+SET MLIB  = &STR('SYS1.DSNDB2V.SDSNSPFM')                   
+SET PLIB1 = &STR('SYS1.DSNDB2V.SDSNPFPE')                   
+SET PLIB2 = &STR('SYS1.DSNDB2V.SDSNSPFP')                   
+SET TLIB  = &STR('SYS1.DSNDB2V.SDSNSPFT')                   
+SET SLIB  = &STR('SYS1.DSNDB2V.SDSNSPFS')                   
+SET CLIB1 = &STR('SYS1.DSND00B.SDSNCLST')                   
+SET ELIB  = &STR()                                          
+SET LLIB  = &STR()                                          
+/*                                                          
+  IF &LLIB ¬= &STR() THEN +                          
+     ISPEXEC LIBDEF ISPLLIB DATASET ID(&LLIB)        
+ IF &PLIB1¬= &STR() THEN +                           
+    ISPEXEC LIBDEF ISPPLIB DATASET ID(&PLIB1 &PLIB2) 
+ IF &MLIB ¬= &STR() THEN +                           
+    ISPEXEC LIBDEF ISPMLIB DATASET ID(&MLIB)         
+ IF &SLIB ¬= &STR() THEN +                           
+    ISPEXEC LIBDEF ISPSLIB DATASET ID(&SLIB)         
+ IF &TLIB ¬= &STR() THEN +                           
+    ISPEXEC LIBDEF ISPTLIB DATASET ID(&TLIB)         
+ IF &CLIB1 ¬= &STR() THEN +                          
+    ALTLIB ACT APPLICATION(CLIST) DATASET(&CLIB1)    
+ IF &ELIB ¬= &STR() THEN +                           
+    ALTLIB ACT APPLICATION(EXEC)  DATASET(&ELIB)     
+ /*                                                  
+ /*    INVOKE PRIMARY PANEL                          
+ ISPEXEC SELECT CMD(%DSNTINST)         
+ /*                                    
+ /*    CANCEL LIBDEFS                  
+ /*                                    
+ ALTLIB DEACTIVATE APPLICATION(CLIST)  
+  ALTLIB DEACTIVATE APPLICATION(EXEC)  
+  ISPEXEC LIBDEF ISPLLIB DATASET       
+  ISPEXEC LIBDEF ISPPLIB DATASET       
+  ISPEXEC LIBDEF ISPMLIB DATASET       
+  ISPEXEC LIBDEF ISPTLIB DATASET       
+  ISPEXEC LIBDEF ISPSLIB DATASET       
+  EXIT
