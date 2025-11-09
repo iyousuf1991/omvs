@@ -1,0 +1,17 @@
+Dear Team,
+
+This is to update you on the DB2 V12 to V13 migration activity scheduled today.
+
+We initiated the change as planned and completed the preparation of the Db2 V13 datasets and supporting libraries across the subsystems. Shortly after the initial setup phase, the system encountered an unexpected DSYS IPL event. During the IPL process, the initiators were drained, which prevented the submission and execution of the required migration jobs (such as DSNTIJUZ and related catalog migration procedures).
+
+The MVS team was working to stabilize the system; however, multiple IPL cycles were required due to underlying system issues. Because of the ongoing IPL and subsystem unavailability, the environment was not in a stable state to safely continue the Db2 upgrade execution workflow.
+
+Once system stability was restored, we re-evaluated the timeline. At that point, we had reached beyond the approved change window. We requested Production Control to stop the relevant Db2 regions to proceed with the cutover, but as the window had elapsed, authorization was not granted. Following standard change governance, we performed a controlled backout of the Db2 upgrade steps to ensure all services remain fully operational without any risk.
+
+Current System State
+
+All Db2 subsystems remain at Db2 V12, fully operational.
+
+No functional or data impacts were observed.
+
+All Db2 datasets and system libraries are intact and consistent.
