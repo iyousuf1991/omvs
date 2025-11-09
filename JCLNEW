@@ -1,0 +1,77 @@
+//COPYDB2  JOB (ACCT),'COPY DB2 LIBS',CLASS=A,MSGCLASS=X,NOTIFY=&SYSUID
+//*********************************************************************
+//*  COPY ALL DB2 V12 LIBRARIES TO V13 (TEST TO PROD)
+//*  FROM: DB2TN.DB2V12.*
+//*    TO: DB2PN.DB2V13.*
+//*********************************************************************
+//STEP1    EXEC PGM=IEFBR14
+//DEL      DD DSN=DB2PN.DB2V13.*,
+//            DISP=(MOD,DELETE,DELETE),UNIT=SYSDA
+//* (Optional: Delete target if exists - remove if not desired)
+//*
+//* ---------------------------------------------------------------
+//* 1. COPY PDS/PDSE LIBRARIES USING IEBCOPY
+//* ---------------------------------------------------------------
+//STEP2    EXEC PGM=IEBCOPY
+//SYSPRINT DD SYSOUT=*
+//SYSUT3   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
+//SYSUT4   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
+//*
+//* List all PDS/PDSE datasets to copy
+//INDD1    DD DSN=DB2TN.DB2V12.SDSNLOAD,DISP=SHR
+//OUTDD1   DD DSN=DB2PN.DB2V13.SDSNLOAD,
+//            DISP=(NEW,CATLG,DELETE),
+//            UNIT=SYSDA,SPACE=(CYL,(50,10,100)),
+//            DCB=(RECFM=FB,LRECL=80,BLKSIZE=0,DSORG=PO)
+//INDD2    DD DSN=DB2TN.DB2V12.SDSNEXIT,DISP=SHR
+//OUTDD2   DD DSN=DB2PN.DB2V13.SDSNEXIT,
+//            DISP=(NEW,CATLG,DELETE),
+//            UNIT=SYSDA,SPACE=(CYL,(10,5,50)),
+//            DCB=(RECFM=FB,LRECL=80,BLKSIZE=0,DSORG=PO)
+//INDD3    DD DSN=DB2TN.DB2V12.SDSNSAMP,DISP=SHR
+//OUTDD3   DD DSN=DB2PN.DB2V13.SDSNSAMP,
+//            DISP=(NEW,CATLG,DELETE),
+//            UNIT=SYSDA,SPACE=(CYL,(20,5,200)),
+//            DCB=(RECFM=FB,LRECL=80,BLKSIZE=0,DSORG=PO)
+//SYSIN    DD *
+  COPY OUTDD=OUTDD1,INDD=INDD1
+  COPY OUTDD=OUTDD2,INDD=INDD2
+  COPY OUTDD=OUTDD3,INDD=INDD3
+/*
+//*
+//* ---------------------------------------------------------------
+//* 2. COPY NON-PDS DATASETS (SEQ, VSAM) USING ADRDSSU (DUMP/RESTORE)
+//* ---------------------------------------------------------------
+//STEP3    EXEC PGM=ADRDSSU,PARM='TYPRUN=NORUN'
+//SYSPRINT DD SYSOUT=*
+//DUMPIN   DD DUMMY
+//DUMPOUT  DD DSN=&&DUMP,UNIT=SYSDA,SPACE=(CYL,(100,50)),
+//            DISP=(NEW,PASS)
+//SYSIN    DD *
+  DUMP OUTDD(DUMPOUT) -
+       DATASET(INCLUDE(DB2TN.DB2V12.**) -
+               EXCLUDE(DB2TN.DB2V12.SDSNLOAD, -
+                       DB2TN.DB2V12.SDSNEXIT, -
+                       DB2TN.DB2V12.SDSNSAMP)) -
+       TOL(ENQF) CANCELERROR
+/*
+//*
+//STEP4    EXEC PGM=ADRDSSU,COND=(0,LT,STEP3)
+//SYSPRINT DD SYSOUT=*
+//RESTIN   DD DSN=&&DUMP,DISP=(OLD,DELETE)
+//SYSIN    DD *
+  RESTORE INDD(RESTIN) -
+          DATASET(INCLUDE(**)) -
+          RENAMEU(DB2TN.DB2V12.,DB2PN.DB2V13.) -
+          CATALOG REPLACE TOL(ENQF) CANCELERROR
+/*
+//*
+//* ---------------------------------------------------------------
+//* 3. VERIFY COPIES
+//* ---------------------------------------------------------------
+//STEP5    EXEC PGM=IKJEFT01
+//SYSTSPRT DD SYSOUT=*
+//SYSTSIN  DD *
+  LISTCAT ENT(DB2PN.DB2V13.*) ALL
+/*
+//
