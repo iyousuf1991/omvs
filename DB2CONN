@@ -1,0 +1,8 @@
+PDB2 COMMDB (SYSIBM.LUNAMES) is empty, so PDB2 isn’t currently set up to initiate “talking” outward.
+
+PDB2 DDF shows LOCATION=TMSPDB2, LU=TMSNET.TMSPDB2, TCPPORT 446 (DSNL004I).
+
+TDB2 COMMDB / SYSIBM.LOCATIONS includes APD2LOC (port 25057), which appears to be an older name and likely not aligned with the current PDB2 location definition.
+
+For the migration scenario (PDB2 source → TDB2 target), the practical approach is: run the pull from TDB2 (requester) connecting to PDB2 (server), and ensure TDB2 COMMDB has a valid entry for the current PDB2 location (TMSPDB2).
+Next step: update SYSIBM.LOCATIONS and SYSIBM.LUNAMES on TDB2 for TMSPDB2, then validate with a quick DDF connectivity test.
