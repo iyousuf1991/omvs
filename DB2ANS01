@@ -1,0 +1,15 @@
+Yes, I agree with you: the issue is most likely that DSNESPCS on TDB2 is bound with a local-only PKLIST (DSNESPCS.DSNESM68 DSNTIAP.DSNTIAP). For SPUFI to run against the remote location TMSDB2A, the plan needs location-qualified entries in the PKLIST.
+
+On your question about the *:
+
+TMSDB2A.*.DSNESPCS.DSNESM68 is generally not what you want here.
+
+The safest/correct approach is to specify the exact collection you want SPUFI to use on the remote system, e.g.:
+
+TMSDB2A.<collection>.DSNESPCS.DSNESM68
+
+TMSDB2A.<collection>.DSNTIAP.DSNTIAP
+
+So yes — the form “Maybe TMSDB2A.DSNESPCS.DSNESM68” is effectively the right direction if DSNESPCS is the collection used on DB2A. If DB2A uses a different collection for these packages, we should use that collection name instead.
+
+Next step: create a CR to REBIND PLAN(DSNESPCS) on TDB2 with the TMSDB2A.location-qualified PKLIST entries first (and align DSNESPRR/DSNESPUR similarly if they’re also used). After that, re-test SPUFI from TDB2 to DB2A — that should clear the -805.
