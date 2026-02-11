@@ -1,0 +1,7 @@
+Thanks for the update. I’m actively working on loading the SMF data from the test LPAR into the IZPCA Db2 database that was created last week. My next step is to schedule the batch job to populate/load the IZPCA tables; once that completes, we should be able to validate the data and view it directly from the IZPCA panels.
+
+Regarding the Cognos reports: if the requirement is to load/publish the canned reports directly into the Cognos environment, we will need to establish connectivity to the Db2 subsystem that hosts the IZPCA data (Db2I) so Cognos can query the IZPCA tables. In parallel, I’m exploring the best approach for enabling this.
+
+To proceed efficiently, could someone please share the Cognos details (where it is hosted, the expected access method, and any existing connectivity pattern—e.g., JDBC/ODBC/gateway)? Once I have that information, I’ll coordinate with the relevant network/security teams to open the required ports and complete the database connectivity setup.
+
+I’ll keep you posted as soon as the SMF load job is scheduled and the initial data validation is completed.
