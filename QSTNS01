@@ -1,0 +1,25 @@
+1. DB2 Version Mismatch Error
+
+Root Cause: A V12 SDSNLOAD library was found to be present in the link list, conflicting with the V13 SDSNLOAD libraries that are APF-authorized per subsystem. When programs resolved DB2 modules, the link list V12 SDSNLOAD was being picked up instead of the intended V13 version for the upgraded subsystems.
+Impact: Version mismatch errors at runtime for applications connecting to the upgraded subsystems.
+
+2. DBeaver Connectivity / Compatibility Issue
+
+Root Cause: DBeaver (DB2 client tool) was likely referencing DB2 V12 JDBC drivers or binding against V12 catalog structures. Post-upgrade to V13, the catalog and/or communication protocol changes caused connection or query failures.
+Impact: Developers unable to use DBeaver to connect to the 6 upgraded V13 subsystems.
+
+3. IMS DB Authorization Error
+
+Root Cause: IMS DB interaction with DB2 relies on the DB2 load libraries being accessible and APF-authorized in the correct sequence. Due to the version mismatch in the link list (V12 SDSNLOAD present), IMS DB's attachment facility likely attempted to load V12 modules, resulting in an authorization failure when encountering the V13 environment.
+Impact: IMS DB to DB2 calls failing with authorization errors, affecting any IMS transactions that access DB2 data.
+
+4. Bind Failures
+
+Root Cause: BIND operations for packages and plans on the upgraded subsystems failed likely due to one or more of the following:
+
+Version mismatch causing the BIND command to resolve against V12 catalog objects or modules.
+DBRMs compiled against V12 being bound on a V13 subsystem without a proper REBIND or migration step.
+Possible authorization issues on DB2 catalog tables if the upgrade migration steps (such as CATMAINT) were not fully completed for all 6 subsystems.
+
+
+Impact: Application packages not successfully bound, causing runtime -805 (package not found) or -818 (timestamp mismatch) errors for dependent applications.
