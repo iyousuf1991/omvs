@@ -1,0 +1,17 @@
+Subject: Pre-Call Notes: TraceMaster PTF & FreezeFrame Upgrade – Clarification on Questions
+
+Hi Bob and Chub,
+
+Ahead of today's call, I want to briefly address the feedback on my earlier questions and clarify the intent behind them.
+
+I fully agree that several of the items I raised — such as CSI zone names, SMP/E RECEIVE/APPLY steps, and library locations — are details that can and should be confirmed directly from the system and from the existing change documentation. I had already reviewed the change records from 2023 (C224999, C235105, C289064, C289196, and the DM8800A install notes), and those documents provide a solid foundation for how DumpMaster was implemented.
+
+The reason I raised those questions was specifically because the available documentation dates back to early-to-mid 2023, and given that TraceMaster and FreezeFrame are mission-critical production systems, I wanted to validate that:
+
+  1. The environment details (CSI, dataset naming conventions, APF/LINKLIST libraries) are still current and haven't changed since the DumpMaster work was completed.
+  2. The vendor download process for the TraceMaster PTF is consistent with what was done for DumpMaster — specifically whether we still use the Macro 4 support portal (HTTPS link with password) and IND$FILE transfer, or whether a different method is now in use.
+  3. The FreezeFrame upgrade path is clearly defined — including the current installed version, the target version required for z/OS 3.1 compatibility, any changes needed to PROCs, SYS1.PARMLIB members, or started task JCL, and whether SMP/E RESTORE is a viable backout option should the upgrade encounter issues in the PBSPLEX.
+
+These are the areas where I'd still appreciate Chub's direct input, as they go beyond what the 2023 documents alone can confirm.
+
+Best regards
