@@ -1,0 +1,31 @@
+here's my consolidated view on the TO2R checklist:
+
+**IEASYMx / IEASYS:**
+Confirmed — TO1R uses member 7A. For TO2R we need a new parmlib member (e.g., 7B or TO2R), update SYSNAME=TO2R, SYSPLEX name if applicable, and ensure IEASYS LIST points to the new member. IOFD device also needs review — currently showing ORIGINAL(07A33)/CURRENT(07A33), so we need to clone or create a new IODF for TO2R and update the HCD accordingly.
+
+**VTAM / ATCSTRxx:**
+- SSCPID must be unique — change to reflect TO2R
+- XCFINIT=NO is correct for most cases to avoid unintended sysplex coupling
+- CPNAME → set to &SYSNAME so it auto-resolves to TO2R
+- NETID must match your network, ensure no clash
+- TRLE names must be unique even if PORTNAME is shared
+- APPL nodes (e.g., TSO1R01 → TSO2R01) — full major node review required
+- USS Tables (USSTAB) — replace hardcoded TO1R references with &SYSNAME
+
+**CDRM:**
+If CDRM nodes are manually defined, cross-add TO2R into TO1R's CDRM list and vice-versa. Verify NETWORK definition in ATCCONxx.
+
+**Local Non-SNA / 3270 Terminals:**
+Verify hardware addresses in HMC match what's defined in the LPAR's local major node definitions for TO2R.
+
+**IODF:**
+As seen in IPLINFO — need to validate the IODF has the correct channel paths, OSA definitions, and CHPID mappings for TO2R's hardware. Build a new production IODF and validate boot before cutover.
+
+**Additional items to add to the checklist:**
+- SMF SID= parameter → must be unique (SYS1.PARMLIB SMFPRMxx)
+- TCP/IP PROFILE → hostname, home addresses, OSA interface names
+- JES2/JES3 node name (NJENODE) → update if sharing network
+- RACF if shared DB → ensure TO2R has its own node defined
+- Sysplex couple datasets → if TO2R joins the same sysplex, CFRM/LOGR/ARM policies need updating
+
+Suggested next step: let's build a formal IPL parameter worksheet covering all parmlib members that need cloning/editing before we do the first IPL of TO2R.
