@@ -1,0 +1,13 @@
+As mentioned earlier, I am currently gathering further information and continuing the root cause analysis related to the DB2 behavior observed in TSYS, where DB2 access appears to hang. This was noticed after enabling ZSORT. At this stage, I am not directly attributing the issue to ZSORT; however, I would like to complete the validation thoroughly before we consider moving forward with DSYS.
+
+As part of the detailed assessment, I will include the following in the report and validation plan:
+
+Comparison of RMF Monitor III and RMF/SMF data before and after enabling the change for the selected REORG/LOAD test cases
+Analysis of CP CPU reduction, zIIP CPU increase, and elapsed time improvement
+Selection of a sufficiently large REORG or LOAD utility job as the test case candidate to ensure the comparison is meaningful
+Review of the current zIIP busy percentage in coordination with Aravind to confirm there are no capacity or utilization constraints, especially for DEV and PROD systems
+Validation to ensure there is no impact to DDF response time or overall DB2 service behavior
+
+My primary concern is to ensure that we fully understand the current issue in TSYS and avoid any similar impact when moving to DSYS, particularly since DSYS has multiple subsystems and requires a controlled, low-risk implementation approach.
+
+I will prepare and share the proposed plan and tentative timeline early next week. I will also arrange the interim discussion as requested so that we can review the approach together before proceeding further.
