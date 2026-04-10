@@ -1,0 +1,9 @@
+During our recent testing on the TSYS LPAR, we observed issues after enabling the zSORT option. Following the enablement, the DB2 subsystem started hanging and began producing dumps. To validate the behavior, we performed a backout, and after reverting the change, the subsystem returned to normal operation. Based on this, it appears the issue was introduced after the zSORT enablement, and I wanted to highlight this observation clearly before we proceed further.
+
+At this stage, I am reviewing the additional options and related settings that may need to be enabled or aligned along with zSORT. This includes, for example, associated DB2 and system-level prerequisites, related sort service options, compatibility of supporting modules/exits, and any other dependent parameters that should be in place before enabling zSORT in the target environment. The objective is to ensure that the enablement is performed in a controlled and optimized manner, without introducing instability to the subsystem.
+
+Before proceeding with the DSYS LPAR, I want to be fully confident in the root cause, the supporting prerequisites, and the overall remediation approach. Since enabling zSORT requires a recycle of the DB2 subsystem, I would prefer to treat this as a focused activity/project rather than a routine change, so that we can assess the dependencies properly, validate the required settings, and minimize any operational risk.
+
+To manage this effectively, I will schedule a weekly call so we can review the findings, track the investigation, and discuss the optimization plan and next steps. I will also provide weekly progress updates until the analysis is complete and we are in a position to move forward safely with DSYS.
+
+Please let me know if you would like me to share the initial findings and proposed checklist before the first weekly review.
