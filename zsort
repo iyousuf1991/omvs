@@ -1,0 +1,17 @@
+I have completed the zSORT validation with approximately 7.6 million records. Multiple DB2 utility-related activities were tested, including table creation, data load, data unload, REORG execution, index-related processing, and sort-intensive DB2 utility operations. All activities completed successfully, and we observed good performance improvement during the testing.
+
+I also reviewed the RMF data and noticed a positive CPU performance impact. Although the zSORT CPU usage was less than 10%, the overall result shows a noticeable reduction in general CPU consumption during the tested workloads. This indicates that zSORT/zIIP offload is helping to reduce the CPU workload for sort-related DB2 utility processing.
+
+The following activities were validated as part of the zSORT testing:
+
+DB2 table creation and test data preparation
+Large-volume data load processing
+Data unload processing
+REORG execution with sort activity
+Index-related sort processing
+Utility execution using approximately 7.6 million records
+RMF review to confirm CPU usage and zIIP/zSORT impact
+
+Based on the successful validation, we can proceed with enabling zSORT on DSYS. To enable zSORT, we need to update the required DB2 ZPARM and perform a planned recycle of the DB2 subsystem.
+
+Please advise a suitable maintenance window when we can start the ZPARM update and DB2 recycle activity on DSYS.
