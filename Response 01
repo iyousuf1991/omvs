@@ -1,0 +1,29 @@
+Db2 V12 to V13 Backward Compatibility Notes
+
+Application compatibility is controlled through APPLCOMPAT
+Db2 allows application SQL behavior to be controlled using the APPLCOMPAT bind option.
+Existing applications/packages can continue to run with the current Db2 V12 application compatibility level after the subsystem is migrated to Db2 V13.
+This helps avoid immediate SQL behavior changes for applications after the Db2 V13 upgrade.
+No immediate application code change is expected
+For normal static and dynamic SQL applications, no application code change is expected only because of the Db2 V13 migration.
+Existing packages and plans should continue to work, provided they are currently valid and supported.
+REBIND is not mandatory immediately for all applications
+Existing packages do not need to be rebound immediately only for the Db2 V13 migration.
+However, REBIND may be required later based on maintenance, package validation, access path review, or when enabling higher Db2 V13 function/application compatibility levels.
+New Db2 V13 SQL features are not automatically enabled
+Applications will not automatically start using new Db2 V13 SQL behavior/features.
+To use new Db2 V13 SQL features, packages must be bound/rebound with the appropriate Db2 V13 APPLCOMPAT level.
+Application testing is still required
+Even though backward compatibility is supported, application teams should perform basic regression testing.
+Recommended testing areas:
+Online transactions
+Batch jobs
+Stored procedures
+Dynamic SQL applications
+Reporting/query tools
+Critical business functions
+Key point for application teams
+The Db2 V13 migration itself should be transparent to most applications if the existing V12 APPLCOMPAT level is retained.
+Any change to APPLCOMPAT, REBIND strategy, SQL behavior, or use of new V13 features should be planned, tested, and controlled separately.
+
+In summary, Db2 V13 provides backward compatibility for existing Db2 V12 applications, and the immediate upgrade does not require application changes unless we intentionally enable new Db2 V13 function levels or rebind packages with newer application compatibility.
