@@ -1,0 +1,57 @@
+//DB2E013  JOB (P90B020,B1B0,999,999),'DB SUPPORT',NOTIFY=&SYSUID,      00010000
+//         CLASS=X,MSGCLASS=Q,TIME=1,REGION=4M                          00020000
+//PROC  JCLLIB ORDER=DB2SYS.TCS.COMMON.PROCLIB                          00030000
+//  EXPORT SYMLIST=*                                                    00040000
+//*                                                                     00050000
+//  SET DB2ID=DB2E   /*DB2 IF TO BE ACCESSED                            00060000
+//  SET SYSID=DB2T   /*EXECUTION ENVIRONMENT                            00070000
+//*                                                                     00080000
+//JOBLIB  DD  DSN=&SYSID.N.SHR.&DB2ID..DSNLOAD,DISP=SHR                 00090000
+//*                                                                     00100000
+//*------------------------------------------------------------+        00110000
+//* PURPOSE                                                    º        00120000
+//* =======                                                    º        00130000
+//* RUN THE THREE IMPORTANT SAMPLE ROUTINES : TIAD, TIAUL, TEP2º        00140000
+//* THESE ARE THE V12 ROUTINES THAT MUST STILL WORK AFTER      º        00150000
+//* THE UPGRADE                                                º        00160000
+//*                                                            º        00170000
+//* IF THERE IS A FAILURE AT THIS POINT, YOU WIL ENCOUNTER     º        00180000
+//* ISSUES LATER DURING THE UPGRADE.  MAKE SURE THAT THE VALUE º        00190000
+//* IN PARMLIB IS CORRECT FOR THE INVOKATION OF THESE ROUTINES º        00200000
+//*                                                            º        00210000
+//*************************************************************+        00220000
+//*                                                            º        00230000
+//* EXPECTED ELAPSED TIME = 2 MINUTES                          º        00240000
+//*                                                            º        00250000
+//*************************************************************+        00260000
+//*                                                            º        00270000
+//* CHANGE HISTORY                                             º        00280000
+//* ==============                                             º        00290000
+//* JUN 2026 - CREATED                                         º        00300000
+//*------------------------------------------------------------+        00310000
+//*                                                                     00320000
+//DSNTIAD  EXEC DSNTIAD                                                 00330000
+//SYSIN DD *                                                            00340000
+ SET CURRENT SQLID = 'DB2ADM';                                          00350000
+ COMMIT;                                                                00360000
+/*                                                                      00370000
+//DSNTEP2  EXEC DSNTEP2                                                 00380000
+//SYSIN DD *                                                            00390000
+  SELECT * FROM SYSIBM.SYSTABLES FETCH FIRST 10 ROWS ONLY               00400000
+/*                                                                      00410000
+//*                                                                     00420000
+//DSNTIAUL EXEC DSNTIAUL                                                00430000
+//SYSREC00 DD SYSOUT=*                                                  00440000
+//SYSPUNCH DD SYSOUT=*                                                  00450000
+//SYSIN DD *                                                            00460000
+ SYSIBM.SYSDATABASE                                                     00470000
+/*                                                                      00480000
+//ENDJOB  IF RC>0 | ABEND=TRUE THEN                                     00490000
+//FAILED  EXEC JOBFAIL                                                  00500000
+//ENDJOB  ELSE                                                          00510000
+//OK      EXEC JOBOK                                                    00520000
+//ENDJOB  ENDIF                                                         00530000
+//ALLRC   IF RC>=0 | ABEND=TRUE THEN                                    00540000
+//XFC     EXEC XFC                                                      00550000
+//LISTRC  EXEC LISTRC                                                   00560000
+//ALLRC   ENDIF                                                         00570000

@@ -1,0 +1,145 @@
+//DB2E012  JOB (P90B020,B1B0,999,999),'DB SUPPORT',NOTIFY=&SYSUID,      00010000
+//         CLASS=X,MSGCLASS=Q,TIME=1,REGION=4M                          00020000
+//PROC  JCLLIB ORDER=DB2SYS.TCS.COMMON.PROCLIB                          00030000
+//*                                                                     00040000
+//  EXPORT SYMLIST=*                                                    00050000
+//  SET DB2ID=DB2E      /*DB2 IF TO BE ACCESSED                         00060000
+//  SET SYSID=DB2T      /*EXECUTION ENVIRONMENT                         00070000
+//  SET MEM=ZPARM1      /*FIRST ZPARM EXTRACT                           00080000
+//  SET IMS=EIMS        /*IMS COMMAND RECOGNITION CHARACTER             00090000
+//*                                                                     00100000
+//JOBLIB  DD  DSN=&SYSID.N.SHR.&DB2ID..DSNLOAD,DISP=SHR                 00110000
+//*                                                                     00120000
+//*------------------------------------------------------------+        00130000
+//* PURPOSE                                                    º        00140000
+//* =======                                                    º        00150000
+//* LIST VARIOUS DB2 COMPONENTS TO BE CHECKED BEFORE THE       º        00160000
+//* MAKE SURE THAT ALL ISSUES HVE BEEN ADDRESSED BEFORE YOU    º        00170000
+//* CONTINUE WITH THE UPGRADE                                  º        00180000
+//*                                                            º        00190000
+//* MAKE SURE THAT THERE ARE NO STOPPED UTILIES. ALSO MAKE     º        00200000
+//* SURE THAT THERE ARE NO BACKOUTS IN PROGRESS. CHECK THE     º        00210000
+//* USAGE OF THE ARCHIVE AND MAKE SURE THAT THERE ARE ALL      º        00220000
+//* ACTIVE LOGS HAVE BEEN ARCHIVED                             º        00230000
+//*                                                            º        00240000
+//*************************************************************+        00250000
+//*                                                            º        00260000
+//* EXPECTED ELAPSED TIME = 5 MINUTES                          º        00270000
+//*                                                            º        00280000
+//*************************************************************+        00290000
+//*                                                            º        00300000
+//* CHANGE HISTORY                                             º        00310000
+//* ==============                                             º        00320000
+//* JUN 2026 - CREATED                                         º        00330000
+//*                                                            º        00340000
+//*------------------------------------------------------------+        00350000
+//*                                                                     00360000
+//ISDB2UP EXEC ISDB2UP                                                  00370000
+//*                                                                     00380000
+//S1 IF RC=0 THEN                                                       00390000
+//*                                                                     00400000
+//* LIST ACTIVE ADDRESS SPACES                                          00410000
+//LIST   EXEC ZOSDA                                                     00420000
+//*                                                                     00430000
+//*                                                                     00440000
+//* LIST DDF LINKS                                                      00450000
+//CHKDDF  EXEC CHKDDF                                                   00460000
+//*                                                                     00470000
+//*                                                                     00480000
+//* LIST ENQUES ON LOADLIB                                              00490000
+//GRS    EXEC  ZOSCMD                                                   00500000
+//CMDIN  DD *,SYMBOLS=JCLONLY                                           00510000
+  D GRS,RES=(*,&SYSID.N.SHR.&DB2ID..DSNLOAD)                            00520000
+/*                                                                      00530000
+//*                                                                     00540000
+//*                                                                     00550000
+//* DISPLAY IMS CONNECTIONS                                             00560000
+//IMSDISPL EXEC ZOSCMD                                                  00570000
+//CMDIN    DD  *,SYMBOLS=JCLONLY                                        00580000
+&IMS.SDIS SUBSYS &DB2ID                                                 00590000
+//*                                                                     00600000
+//*                                                                     00610000
+//* DISPLAY CONNECTED LOCATIONS                                         00620000
+//LOCATION EXEC DB2CMD                                                  00630000
+//CMDIN    DD  *                                                        00640000
+ -DIS LOCATION(*) DETAIL                                                00650000
+/*                                                                      00660000
+//*                                                                     00670000
+//* DISPLAY ACTIVE THREADS                                              00680000
+//THREADS  EXEC DB2CMD                                                  00690000
+//CMDIN    DD  *                                                        00700000
+ -DIS THREAD(*)                                                         00710000
+/*                                                                      00720000
+//*                                                                     00730000
+//* DISPLAY ACTIVE UTILITIES                                            00740000
+//UTILS    EXEC DB2CMD                                                  00750000
+//CMDIN    DD  *                                                        00760000
+ -DIS UTIL(*)                                                           00770000
+/*                                                                      00780000
+//*                                                                     00790000
+//* DISPLAY RESTRICTED DATA OBJECTS                                     00800000
+//RESTRICT EXEC DB2CMD                                                  00810000
+//CMDIN    DD  *                                                        00820000
+ -DIS DB(*) SP(*) RESTRICT LIMIT(*)                                     00830000
+/*                                                                      00840000
+//*                                                                     00850000
+//* DISPLAY POSSIBLE BLOCKERS FOR THE UPGRADE                           00860000
+//BLOCKER  EXEC DB2CMD                                                  00870000
+//CMDIN    DD  *                                                        00880000
+ -DIS BLOCKERS(DSNDB01,DSNDB06)                                         00890000
+/*                                                                      00900000
+//*                                                                     00910000
+//* DISPLAY GROUP INFO                                                  00920000
+//GROUP    EXEC DB2CMD                                                  00930000
+//CMDIN    DD  *                                                        00940000
+ -DIS GROUP DETAIL                                                      00950000
+/*                                                                      00960000
+//*                                                                     00970000
+//* DISPLAY ACTIVE LOG STATUS                                           00980000
+//LOGS     EXEC DB2CMD                                                  00990000
+//CMDIN    DD  *                                                        01000000
+ -DIS LOG                                                               01010000
+/*                                                                      01020000
+//*                                                                     01030000
+//* DISPLAY ARCHIVE STATUS/USAGE                                        01040000
+//ARCHIVE  EXEC DB2CMD                                                  01050000
+//CMDIN    DD  *                                                        01060000
+ -DIS ARCHIVE                                                           01070000
+/*                                                                      01080000
+//* LIST ALL WLM ENVIRONMENTS                                           01090000
+//WLMENV EXEC ZOSCMD                                                    01100000
+//CMDIN  DD *                                                           01110000
+D WLM,APPLENV=*                                                         01120000
+/*                                                                      01130000
+//* LIST ENABLEMENT                                                     01140000
+//ENABLE EXEC ZOSCMD                                                    01150000
+//CMDIN  DD *                                                           01160000
+D PROD,STATE                                                            01170000
+/*                                                                      01180000
+//* CHECK FOR MISSIG WLM                                                01190000
+//CHKWLM  EXEC CHKWLM                                                   01200000
+//*                                                                     01210000
+//* CHECK IF WE CAN MIGRATE                                             01220000
+//CHKGRP  EXEC CHKGROUP                                                 01230000
+//*                                                                     01240000
+//* CHECK IF UTILITY SUITE IS ENABLED                                   01250000
+//CHKUTIL EXEC CHKENBLE                                                 01260000
+//*                                                                     01270000
+//* LIST EXISTING ZPARM VALUES                                          01280000
+//LISTZ   EXEC REXXEXEC,ROUTINE=LSTZPARM                                01290000
+//ZPARM   DD DISP=SHR,DSN=DB2SYS.TCS.&DB2ID..PARM.LIB(&MEM)             01300000
+//*                                                                     01310000
+//* LIST CURRENT FIX LEVELS                                             01320000
+//LISTMEPL EXEC LISTMEPL,MEM=MEPL1                                      01330000
+//*                                                                     01340000
+//S1 ENDIF                                                              01350000
+//*                                                                     01360000
+//ENDJOB  IF RC>4 | ABEND=TRUE THEN                                     01370000
+//FAILED  EXEC JOBFAIL                                                  01380000
+//ENDJOB  ELSE                                                          01390000
+//OK      EXEC JOBOK                                                    01400000
+//ENDJOB  ENDIF                                                         01410000
+//ALLRC   IF RC>=0 | ABEND=TRUE THEN                                    01420000
+//XFC     EXEC XFC                                                      01430000
+//LISTRC  EXEC LISTRC                                                   01440000
+//ALLRC   ENDIF                                                         01450000
